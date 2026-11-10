@@ -106,10 +106,22 @@ coverage/
 # 编译出来的 class、shade 后的 jar 都在这里，全部重新生成即可
 target/
 
-# ---------- 打包产物：整目录排除 ----------
-# packaging/ 内含 JRE(rt.jar 60MB)、Android SDK(lld.exe 38MB)、
-# 安装包 exe(26MB)、apk —— 合计 512MB，属于构建产物，不纳入版本控制
-packaging/
+# ---------- 打包链：只排除工具链与产物，保留源码 ----------
+# packaging/ 共 512MB，绝大部分是可再生的：JRE 98MB、Android SDK 380MB、
+# NSIS 工具链 7.8MB，以及 apk/exe 成品。这些不进版本控制。
+# 但 Android 源码、构建脚本、测试、NSIS 脚本属于"源"，必须纳入。
+packaging/app/
+packaging/nsis-3.11/
+packaging/android/sdk/
+packaging/android/build/
+packaging/android/assets/
+packaging/tools/classes/
+
+# ---------- 签名密钥：绝不入库 ----------
+# release.keystore 是覆盖升级已安装 App 的唯一凭证，丢失无法补发
+*.keystore
+*.jks
+release.keystore
 
 # ---------- 制品文件 ----------
 *.jar

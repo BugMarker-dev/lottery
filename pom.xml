@@ -32,7 +32,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>com.lottery.LotteryApp</mainClass>
+                            <mainClass>com.lottery.LotteryServer</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
@@ -48,7 +48,7 @@
                         <configuration>
                             <transformers>
                                 <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                                    <mainClass>com.lottery.LotteryApp</mainClass>
+                                    <mainClass>com.lottery.LotteryServer</mainClass>
                                 </transformer>
                             </transformers>
                         </configuration>

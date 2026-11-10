@@ -1,6 +1,7 @@
-# lottery · 大乐透号码生成器
+# lottery · 财富密码（大乐透号码生成器）
 
-基于体彩历史开奖数据的号码生成与预测工具，提供 Web 界面与命令行两种用法。
+基于体彩历史开奖数据的号码生成与预测工具，提供 Web 界面、命令行和安卓 App 三种形态。
+安装到手机/桌面后显示名为「财富密码」，包名 `com.lottery.app` 保持不变以保证覆盖升级。
 
 - **后端**：Java 8+，使用 JDK 内置 `com.sun.net.httpserver`，无第三方 Web 框架
 - **构建**：Maven，`maven-shade-plugin` 打成单个可执行 jar
@@ -28,22 +29,67 @@ lottery/
 
 ## 构建与运行
 
-需要 **JDK 8 或更高版本**（`java -version` 可验证）和 **Maven**。
+只需要 **JDK 8**（`java -version` 验证）。不装 Maven 也能构建。
+
+> ⚠️ 仓库里**不含任何 jar 文件**（`*.jar` 已被 `.gitignore` 排除），`clone` 下来必须先构建一次才能运行。
+
+### 方式一：手工构建（项目最初采用的方式，无需 Maven）
+
+```bash
+# 1. 编译，classpath 指向本地仓库里的 org.json
+JSON_JAR="$HOME/.m2/repository/org/json/json/20231013/json-20231013.jar"
+javac -encoding UTF-8 -cp "$JSON_JAR" -d target/classes $(find src/main/java -name "*.java")
+
+# 2. 打 fat jar（把 org.json 的类一起解进去，否则运行时报 NoClassDefFoundError）
+mkdir -p target/fat && cd target/fat
+unzip -oq "$JSON_JAR" && cp -r ../classes/* .
+jar cfe ../../lottery-web.jar com.lottery.LotteryServer .
+cd ../..
+```
+
+Windows 的 cmd / Git Bash 里 `;` 分隔的 classpath 会被 MSYS 改写，需要加前缀
+`MSYS2_ARG_CONV_EXCL='*'`。
+
+### 方式二：有 Maven 的话
 
 ```bash
 mvn clean package
 java -jar target/lottery-1.0.0.jar
 ```
 
-Windows 下也可以先构建一次，之后直接双击 `start.bat` 启动 —— 它执行的就是上面那条 `java -jar`，并会在端口被占用时自动顺延到下一个可用端口。
+`pom.xml` 里的 `mainClass` 已设为 `com.lottery.LotteryServer`，构建出的 jar 直接启动 Web 服务。
 
-### 命令行用法
+### 启动
 
 ```bash
-java -jar lottery-1.0.0.jar          # 交互模式
-java -jar lottery-1.0.0.jar 5        # 直接随机生成 5 注
-java -jar lottery-1.0.0.jar p 5      # 拉取历史数据并预测生成 5 注
+java -jar lottery-web.jar          # 默认 8080，端口被占自动顺延到 8081~8089
+java -jar lottery-web.jar 9000     # 指定端口
+java -jar lottery-web.jar silent   # 不自动打开浏览器（后台运行用）
 ```
+
+Windows 下也可以先构建一次，之后直接双击 `start.bat`。服务监听 `0.0.0.0`，启动后终端会打印本机与局域网访问地址，同网段手机可直接访问。
+
+### 命令行模式（CLI）
+
+jar 的默认入口是 Web 服务，命令行版要显式指定类名：
+
+```bash
+java -cp lottery-web.jar com.lottery.LotteryApp       # 交互模式
+java -cp lottery-web.jar com.lottery.LotteryApp 5     # 随机生成 5 注
+java -cp lottery-web.jar com.lottery.LotteryApp p 5   # 拉取历史数据并预测 5 注
+```
+
+### 安卓 APK
+
+构建脚本不依赖 Gradle / Android Studio，走 aapt2 + javac + d8 + zipalign + apksigner：
+
+```bash
+export LOTTERY_KS_PASS='签名密钥密码'    # 密码不写在脚本里，必须通过环境变量传入
+bash packaging/android/build-apk.sh
+```
+
+依赖 `packaging/android/sdk/` 下解压好的 platform 与 build-tools 目录（**勿删**）。
+`release.keystore` 是覆盖升级已安装 App 的唯一凭证，请在仓库外另行备份。
 
 ## 关于仓库内容
 
