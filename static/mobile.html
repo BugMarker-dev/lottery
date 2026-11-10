@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#e0453e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="财富密码">
+<meta name="format-detection" content="telephone=no">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.webmanifest">
+<title>财富密码</title>
+<style>
+  :root {
+    --red: #e0453e;
+    --blue: #2f6fd6;
+    --ink: #23272e;
+    --muted: #8a9099;
+    --line: #eef0f3;
+    --bg: #f4f5f7;
+    --card: #ffffff;
+    --nav-h: 58px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+  html, body { height: 100%; }
+  body {
+    font-family: -apple-system, "PingFang SC", "Noto Sans CJK SC", "Microsoft YaHei", sans-serif;
+    background: var(--bg); color: var(--ink);
+    display: flex; flex-direction: column;
+    overscroll-behavior-y: none;
+    user-select: none;
+  }
+
+  /* 顶部 */
+  header {
+    flex-shrink: 0;
+    padding: calc(14px + env(safe-area-inset-top)) 18px 12px;
+    background: var(--card);
+    border-bottom: 1px solid var(--line);
+    display: flex; align-items: center; justify-content: space-between;
+  }
+  header h1 { font-size: 17px; font-weight: 600; letter-spacing: .5px; }
+  header .sub { font-size: 11px; color: var(--muted); margin-top: 3px; }
+  header .status { font-size: 10px; color: var(--muted); text-align: right; line-height: 1.5; }
+  header .status .dot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #34c759; margin-right: 4px; vertical-align: 1px; }
+  header .status .dot.off { background: #ff9500; }
+
+  /* 内容区 */
+  main {
+    flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch;
+    padding: 14px 14px calc(20px + env(safe-area-inset-bottom));
+  }
+  .panel { display: none; }
+  .panel.on { display: block; }
+
+  .card { background: var(--card); border-radius: 14px; padding: 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,.05); }
+  .card h2 { font-size: 15px; font-weight: 600; }
+  .card .desc { font-size: 12px; color: var(--muted); margin-top: 4px; line-height: 1.5; }
+
+  .stepper { display: flex; align-items: center; gap: 10px; margin: 16px 0; }
+  .stepper button {
+    width: 40px; height: 40px; border: 1px solid #dcdfe4; background: #fff; border-radius: 11px;
+    font-size: 20px; color: #444; line-height: 1;
+  }
+  .stepper button:active { background: #f0f1f3; }
+  .stepper input {
+    width: 76px; height: 40px; text-align: center; font-size: 17px; font-weight: 600;
+    border: 1px solid #dcdfe4; border-radius: 11px; outline: none; -moz-appearance: textfield; background: #fff;
+    color: var(--ink);
+  }
+  .stepper input::-webkit-inner-spin-button, .stepper input::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .stepper .unit { font-size: 12px; color: var(--muted); }
+
+  .btn-main {
+    width: 100%; border: 0; background: var(--red); color: #fff; font-size: 16px; font-weight: 600;
+    padding: 14px 0; border-radius: 13px; letter-spacing: 3px;
+  }
+  .btn-main:active { opacity: .86; }
+  .btn-main:disabled { opacity: .55; }
+  .btn-blue { background: var(--blue); }
+
+  /* 号码 */
+  .tickets { margin-top: 14px; }
+  .ticket { display: flex; align-items: center; padding: 11px 2px; border-top: 1px solid var(--line); }
+  .ticket:first-child { border-top: 0; }
+  .ticket .idx { width: 42px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .balls { display: flex; gap: 5px; flex-wrap: wrap; }
+  .ball {
+    width: 30px; height: 30px; border-radius: 50%; color: #fff; font-size: 13px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+  }
+  .ball.front { background: var(--red); }
+  .ball.back { background: var(--blue); }
+  .gap { width: 8px; flex-shrink: 0; }
+
+  /* 统计 */
+  .seg { display: flex; background: #eef0f3; border-radius: 10px; padding: 3px; margin: 14px 0; }
+  .seg button {
+    flex: 1; border: 0; background: transparent; padding: 8px 0; font-size: 13px; color: #6b7078; border-radius: 8px;
+  }
+  .seg button.on { background: #fff; color: var(--ink); font-weight: 600; box-shadow: 0 1px 3px rgba(0,0,0,.08); }
+  .side-title { font-size: 12px; color: var(--muted); margin: 14px 0 9px; font-weight: 500; }
+  .chips { display: grid; grid-template-columns: repeat(auto-fill, minmax(78px, 1fr)); gap: 8px; }
+  .chip { display: flex; align-items: center; gap: 6px; background: #f7f8fa; border-radius: 10px; padding: 7px 8px; }
+  .chip .ball { width: 26px; height: 26px; font-size: 12px; }
+  .chip .m { font-size: 11px; line-height: 1.25; }
+  .chip .m b { font-size: 12px; display: block; }
+  .chip .m span { color: var(--muted); font-size: 10px; }
+
+  /* 记录 */
+  .rec { display: flex; align-items: center; padding: 12px 2px; border-top: 1px solid var(--line); flex-wrap: wrap; gap: 8px; }
+  .rec:first-child { border-top: 0; }
+  .rec .info { width: 92px; flex-shrink: 0; }
+  .rec .info b { font-size: 12px; font-weight: 600; display: block; }
+  .rec .info span { font-size: 10px; color: var(--muted); }
+
+  .banner { padding: 10px 12px; border-radius: 10px; font-size: 12px; margin-bottom: 12px; line-height: 1.5; }
+  .banner.err { background: #fdeeee; color: #c0392b; }
+  .banner.warn { background: #fff6e8; color: #a86b00; }
+  .empty { text-align: center; color: var(--muted); font-size: 13px; padding: 30px 0; }
+  .spin {
+    display: inline-block; width: 13px; height: 13px; border: 2px solid #dcdfe4; border-top-color: var(--red);
+    border-radius: 50%; animation: r .7s linear infinite; vertical-align: -2px; margin-right: 6px;
+  }
+  @keyframes r { to { transform: rotate(360deg); } }
+
+  .tip { font-size: 11px; color: #b0b5bd; text-align: center; line-height: 1.7; padding: 6px 10px 0; }
+
+  /* 底部 tab */
+  nav {
+    flex-shrink: 0; display: flex; background: var(--card); border-top: 1px solid var(--line);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  nav button {
+    flex: 1; border: 0; background: transparent; padding: 8px 0 7px;
+    display: flex; flex-direction: column; align-items: center; gap: 3px;
+    font-size: 10px; color: #9aa0a8;
+  }
+  nav button svg { width: 22px; height: 22px; stroke: currentColor; fill: none; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  nav button.on { color: var(--red); }
+  nav button.on svg { stroke: var(--red); }
+  nav button:active { background: #fafafa; }
+
+  /* 复制提示 */
+  .toast {
+    position: fixed; left: 50%; bottom: calc(var(--nav-h) + 24px); transform: translateX(-50%) translateY(10px);
+    background: rgba(35,39,46,.92); color: #fff; font-size: 12px; padding: 8px 16px; border-radius: 20px;
+    opacity: 0; pointer-events: none; transition: all .22s; z-index: 99;
+  }
+  .toast.on { opacity: 1; transform: translateX(-50%) translateY(0); }
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>财富密码</h1>
+    <div class="sub">前区 01-35 选 5 · 后区 01-12 选 2</div>
+  </div>
+  <div class="status" id="status"><span class="dot off"></span>未加载数据</div>
+</header>
+
+<main>
+  <div id="err-box"></div>
+
+  <!-- 随机 -->
+  <section class="panel on" id="panel-random">
+    <div class="card">
+      <h2>随机选号</h2>
+      <p class="desc">纯随机，每一注的中奖概率完全相同</p>
+      <div class="stepper">
+        <button type="button" data-step="random" data-d="-1">−</button>
+        <input type="number" id="count-random" value="5" min="1" max="1000" inputmode="numeric">
+        <button type="button" data-step="random" data-d="1">＋</button>
+        <span class="unit">注</span>
+      </div>
+      <button class="btn-main" id="btn-random">生成随机号码</button>
+      <div class="tickets" id="list-random"></div>
+    </div>
+  </section>
+
+  <!-- 预测 -->
+  <section class="panel" id="panel-predict">
+    <div class="card">
+      <h2>热号预测</h2>
+      <p class="desc" id="predict-desc">基于历史开奖数据的频率加权抽样</p>
+      <div class="stepper">
+        <button type="button" data-step="predict" data-d="-1">−</button>
+        <input type="number" id="count-predict" value="3" min="1" max="1000" inputmode="numeric">
+        <button type="button" data-step="predict" data-d="1">＋</button>
+        <span class="unit">注</span>
+      </div>
+      <button class="btn-main btn-blue" id="btn-predict">生成预测号码</button>
+      <div class="tickets" id="list-predict"></div>
+    </div>
+  </section>
+
+  <!-- 统计 -->
+  <section class="panel" id="panel-stats">
+    <div class="card">
+      <h2>号码统计</h2>
+      <p class="desc" id="stats-desc">加载中...</p>
+      <div class="seg">
+        <button type="button" id="seg-global" class="on">全部期</button>
+        <button type="button" id="seg-recent">近 30 期</button>
+      </div>
+      <div id="stats-body"><div class="empty"><span class="spin"></span>加载中...</div></div>
+    </div>
+  </section>
+
+  <!-- 记录 -->
+  <section class="panel" id="panel-recent">
+    <div class="card">
+      <h2>最近开奖</h2>
+      <p class="desc">数据来自体彩官方接口</p>
+      <div id="recent-body"><div class="empty"><span class="spin"></span>加载中...</div></div>
+    </div>
+  </section>
+
+  <p class="tip">号码仅供娱乐 · 开奖为独立随机事件<br>历史数据不构成任何中奖概率优势 · 未满 18 周岁禁止购彩</p>
+</main>
+
+<nav>
+  <button type="button" class="on" data-tab="random">
+    <svg viewBox="0 0 24 24"><circle cx="8" cy="8" r="2.2"/><circle cx="16" cy="8" r="2.2"/><circle cx="8" cy="16" r="2.2"/><circle cx="16" cy="16" r="2.2"/><circle cx="12" cy="12" r="1.4"/></svg>
+    随机
+  </button>
+  <button type="button" data-tab="predict">
+    <svg viewBox="0 0 24 24"><path d="M12 3l2.2 4.9 5.3.6-3.9 3.6 1.1 5.2L12 14.8 7.3 17.3l1.1-5.2L4.5 8.5l5.3-.6z"/></svg>
+    预测
+  </button>
+  <button type="button" data-tab="stats">
+    <svg viewBox="0 0 24 24"><path d="M5 19V10M10 19V5M15 19v-6M20 19v-9"/></svg>
+    统计
+  </button>
+  <button type="button" data-tab="recent">
+    <svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2.5"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>
+    记录
+  </button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function () {
+  'use strict';
+
+  const API = 'https://webapi.sporttery.cn/gateway/lottery/getHistoryPageListV1.qry'
+            + '?gameNo=85&provinceId=0&isVerify=1&pageNo=1&pageSize=100';
+  const FRONT_MAX = 35, BACK_MAX = 12, PICK_FRONT = 5, PICK_BACK = 2;
+  const RECENT_N = 30;
+  const CACHE_KEY = 'dlt_history_v1';
+  const CACHE_TTL = 5 * 60 * 1000;    // 5 分钟（超过则后台刷新，界面先显示缓存）
+  const FETCH_TIMEOUT = 10000;        // 单次请求超时 10s
+
+  // 内置离线快照（打包时生成）：接口完全不可用时兜底，保证预测/统计/记录可用
+  const FALLBACK_DATE = '2026-11-09';
+  const FALLBACK = [{"i":"26128","d":"2026-11-09","f":[3,13,20,25,34],"b":[9,12]},{"i":"26127","d":"2026-11-07","f":[5,6,17,18,27],"b":[3,12]},{"i":"26126","d":"2026-11-04","f":[5,11,17,25,34],"b":[4,6]},{"i":"26125","d":"2026-11-02","f":[12,13,23,25,29],"b":[7,10]},{"i":"26124","d":"2026-10-31","f":[12,14,18,22,27],"b":[1,9]},{"i":"26123","d":"2026-10-28","f":[13,18,19,20,28],"b":[9,11]},{"i":"26122","d":"2026-10-26","f":[2,14,21,22,24],"b":[2,12]},{"i":"26121","d":"2026-10-24","f":[6,8,19,24,25],"b":[1,8]},{"i":"26120","d":"2026-10-21","f":[1,6,10,15,32],"b":[3,4]},{"i":"26119","d":"2026-10-19","f":[3,6,20,24,32],"b":[4,7]},{"i":"26118","d":"2026-10-17","f":[2,9,21,26,32],"b":[6,12]},{"i":"26117","d":"2026-10-14","f":[4,13,19,29,31],"b":[2,12]},{"i":"26116","d":"2026-10-12","f":[9,18,22,25,35],"b":[1,10]},{"i":"26115","d":"2026-10-10","f":[12,20,32,33,35],"b":[6,7]},{"i":"26114","d":"2026-10-07","f":[8,12,15,29,30],"b":[9,12]},{"i":"26113","d":"2026-10-05","f":[2,4,6,10,11],"b":[1,10]},{"i":"26112","d":"2026-09-30","f":[1,3,5,10,22],"b":[3,9]},{"i":"26111","d":"2026-09-28","f":[10,11,17,26,29],"b":[1,3]},{"i":"26110","d":"2026-09-26","f":[3,24,25,26,35],"b":[7,9]},{"i":"26109","d":"2026-09-23","f":[12,14,16,27,34],"b":[4,8]},{"i":"26108","d":"2026-09-21","f":[1,5,7,21,35],"b":[1,4]},{"i":"26107","d":"2026-09-19","f":[2,5,7,14,22],"b":[4,10]},{"i":"26106","d":"2026-09-16","f":[14,17,21,25,28],"b":[4,6]},{"i":"26105","d":"2026-09-14","f":[10,14,30,33,34],"b":[9,12]},{"i":"26104","d":"2026-09-12","f":[1,6,14,15,26],"b":[8,9]},{"i":"26103","d":"2026-09-09","f":[3,16,17,32,35],"b":[2,12]},{"i":"26102","d":"2026-09-07","f":[1,3,7,27,28],"b":[6,7]},{"i":"26101","d":"2026-09-05","f":[9,11,18,26,33],"b":[9,11]},{"i":"26100","d":"2026-09-02","f":[2,6,11,15,31],"b":[7,8]},{"i":"26099","d":"2026-08-31","f":[2,17,20,29,33],"b":[8,9]},{"i":"26098","d":"2026-08-29","f":[7,9,18,19,21],"b":[2,9]},{"i":"26097","d":"2026-08-26","f":[3,10,12,20,25],"b":[1,9]},{"i":"26096","d":"2026-08-24","f":[8,9,10,11,25],"b":[4,12]},{"i":"26095","d":"2026-08-22","f":[4,6,8,10,14],"b":[4,5]},{"i":"26094","d":"2026-08-19","f":[5,14,15,17,33],"b":[1,7]},{"i":"26093","d":"2026-08-17","f":[8,10,22,26,29],"b":[3,10]},{"i":"26092","d":"2026-08-15","f":[12,16,19,29,33],"b":[7,9]},{"i":"26091","d":"2026-08-12","f":[3,4,7,12,32],"b":[1,2]},{"i":"26090","d":"2026-08-10","f":[9,14,17,19,24],"b":[2,9]},{"i":"26089","d":"2026-08-08","f":[3,7,12,14,26],"b":[5,11]},{"i":"26088","d":"2026-08-05","f":[3,9,11,24,27],"b":[5,11]},{"i":"26087","d":"2026-08-03","f":[5,10,16,24,27],"b":[4,10]},{"i":"26086","d":"2026-08-01","f":[10,11,18,22,35],"b":[6,12]},{"i":"26085","d":"2026-07-29","f":[3,4,14,28,31],"b":[5,7]},{"i":"26084","d":"2026-07-27","f":[13,25,30,32,33],"b":[4,5]},{"i":"26083","d":"2026-07-25","f":[14,15,16,23,26],"b":[7,9]},{"i":"26082","d":"2026-07-22","f":[16,26,27,28,34],"b":[2,6]},{"i":"26081","d":"2026-07-20","f":[8,16,18,24,34],"b":[9,12]},{"i":"26080","d":"2026-07-18","f":[5,10,15,21,23],"b":[7,8]},{"i":"26079","d":"2026-07-15","f":[6,8,23,26,27],"b":[5,12]},{"i":"26078","d":"2026-07-13","f":[2,13,20,25,32],"b":[8,11]},{"i":"26077","d":"2026-07-11","f":[4,14,19,24,27],"b":[6,7]},{"i":"26076","d":"2026-07-08","f":[15,20,27,28,35],"b":[2,11]},{"i":"26075","d":"2026-07-06","f":[1,6,16,18,26],"b":[4,10]},{"i":"26074","d":"2026-07-04","f":[1,4,10,23,25],"b":[1,12]},{"i":"26073","d":"2026-07-01","f":[4,10,22,23,33],"b":[2,12]},{"i":"26072","d":"2026-06-29","f":[1,13,26,29,30],"b":[9,11]},{"i":"26071","d":"2026-06-27","f":[5,13,22,26,32],"b":[2,3]},{"i":"26070","d":"2026-06-24","f":[4,5,15,21,32],"b":[2,11]},{"i":"26069","d":"2026-06-22","f":[12,19,21,24,29],"b":[3,10]},{"i":"26068","d":"2026-06-20","f":[3,11,12,21,22],"b":[6,10]},{"i":"26067","d":"2026-06-17","f":[6,16,18,19,28],"b":[7,11]},{"i":"26066","d":"2026-06-15","f":[10,13,19,21,30],"b":[4,5]},{"i":"26065","d":"2026-06-13","f":[4,11,12,13,25],"b":[4,8]},{"i":"26064","d":"2026-06-10","f":[3,13,15,17,21],"b":[2,7]},{"i":"26063","d":"2026-06-08","f":[3,15,20,29,31],"b":[1,12]},{"i":"26062","d":"2026-06-06","f":[7,15,20,24,29],"b":[4,10]},{"i":"26061","d":"2026-06-03","f":[10,12,26,31,35],"b":[2,12]},{"i":"26060","d":"2026-06-01","f":[22,28,30,31,34],"b":[1,5]},{"i":"26059","d":"2026-05-30","f":[6,13,17,19,26],"b":[7,8]},{"i":"26058","d":"2026-05-27","f":[7,12,13,18,34],"b":[1,5]},{"i":"26057","d":"2026-05-25","f":[23,25,26,27,34],"b":[4,10]},{"i":"26056","d":"2026-05-23","f":[6,7,18,21,30],"b":[1,5]},{"i":"26055","d":"2026-05-20","f":[9,10,20,33,35],"b":[4,11]},{"i":"26054","d":"2026-05-18","f":[2,6,14,22,24],"b":[8,11]},{"i":"26053","d":"2026-05-16","f":[2,9,14,20,31],"b":[5,9]},{"i":"26052","d":"2026-05-13","f":[2,3,20,28,33],"b":[2,12]},{"i":"26051","d":"2026-05-11","f":[13,18,28,32,33],"b":[2,11]},{"i":"26050","d":"2026-05-09","f":[6,10,14,23,33],"b":[8,10]},{"i":"26049","d":"2026-05-06","f":[1,6,14,15,17],"b":[2,3]},{"i":"26048","d":"2026-05-04","f":[11,17,20,23,35],"b":[1,10]},{"i":"26047","d":"2026-05-02","f":[9,20,21,23,28],"b":[6,11]},{"i":"26046","d":"2026-04-29","f":[1,13,18,27,33],"b":[4,7]},{"i":"26045","d":"2026-04-27","f":[1,15,21,26,33],"b":[4,7]},{"i":"26044","d":"2026-04-25","f":[3,8,22,26,29],"b":[7,10]},{"i":"26043","d":"2026-04-22","f":[8,12,14,19,22],"b":[11,12]},{"i":"26042","d":"2026-04-20","f":[2,7,13,19,24],"b":[3,8]},{"i":"26041","d":"2026-04-18","f":[24,25,27,29,34],"b":[2,6]},{"i":"26040","d":"2026-04-15","f":[6,12,13,21,34],"b":[8,9]},{"i":"26039","d":"2026-04-13","f":[9,11,20,26,27],"b":[6,9]},{"i":"26038","d":"2026-04-11","f":[8,17,21,33,35],"b":[6,7]},{"i":"26037","d":"2026-04-08","f":[7,12,13,28,32],"b":[6,8]},{"i":"26036","d":"2026-04-06","f":[4,7,16,26,32],"b":[5,8]},{"i":"26035","d":"2026-04-04","f":[2,22,30,33,34],"b":[8,12]},{"i":"26034","d":"2026-04-01","f":[11,12,25,26,27],"b":[8,11]},{"i":"26033","d":"2026-03-30","f":[3,5,7,9,18],"b":[2,10]},{"i":"26032","d":"2026-03-28","f":[3,4,19,26,32],"b":[1,12]},{"i":"26031","d":"2026-03-25","f":[6,8,22,29,34],"b":[5,7]},{"i":"26030","d":"2026-03-23","f":[2,13,22,28,34],"b":[5,12]},{"i":"26029","d":"2026-03-21","f":[3,5,17,33,35],"b":[5,7]}];
+
+  const state = {
+    tab: 'random',
+    history: null,        // [{issue, date, front:[], back:[]}] 按期号降序
+    historyFromCache: false,
+    loadedAt: 0,
+    statRange: 'global',
+    error: '',
+    usingFallback: false, // 是否正在用内置快照兜底
+    retryCount: 0,
+    retryTimer: 0
+  };
+
+  const $ = (id) => document.getElementById(id);
+
+  // ---------------------------------------------------------------
+  // 工具
+  // ---------------------------------------------------------------
+  const pad = (n) => String(n).padStart(2, '0');
+
+  function randInt(n) {                       // [0, n)
+    if (window.crypto && window.crypto.getRandomValues) {
+      const buf = new Uint32Array(1);
+      window.crypto.getRandomValues(buf);
+      return buf[0] % n;                      // 有极轻微偏差，对选号无实际影响
+    }
+    return Math.floor(Math.random() * n);
+  }
+
+  function toast(msg) {
+    const el = $('toast');
+    el.textContent = msg;
+    el.classList.add('on');
+    clearTimeout(el._t);
+    el._t = setTimeout(() => el.classList.remove('on'), 1600);
+  }
+
+  function showError(msg) {
+    state.error = msg;
+    $('err-box').innerHTML = msg
+      ? '<div class="banner err">' + escapeHtml(msg) + '</div>' : '';
+  }
+
+  function escapeHtml(s) {
+    return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  // ---------------------------------------------------------------
+  // 号码生成：与 Java 版 LotteryGenerator 一致
+  // ---------------------------------------------------------------
+  function randomTicket() {
+    const front = [], back = [];
+    const fPool = [];
+    for (let i = 1; i <= FRONT_MAX; i++) fPool.push(i);
+    for (let i = 0; i < PICK_FRONT; i++) {
+      front.push(fPool.splice(randInt(fPool.length), 1)[0]);
+    }
+    const bPool = [];
+    for (let i = 1; i <= BACK_MAX; i++) bPool.push(i);
+    for (let i = 0; i < PICK_BACK; i++) {
+      back.push(bPool.splice(randInt(bPool.length), 1)[0]);
+    }
+    return { front: front.sort((a, b) => a - b), back: back.sort((a, b) => a - b) };
+  }
+
+  // ---------------------------------------------------------------
+  // 热号权重：与 Java 版 LotteryAnalyzer 一致
+  // 归一化 + 拉普拉斯平滑，混合后权重之和为 1（即真实抽样概率）
+  // ---------------------------------------------------------------
+  function buildWeights(history) {
+    const gF = new Array(FRONT_MAX + 1).fill(0);
+    const gB = new Array(BACK_MAX + 1).fill(0);
+    const rF = new Array(FRONT_MAX + 1).fill(0);
+    const rB = new Array(BACK_MAX + 1).fill(0);
+
+    const recent = history.slice(0, Math.min(RECENT_N, history.length));
+    for (const r of history) {
+      for (const n of r.front) if (n >= 1 && n <= FRONT_MAX) gF[n]++;
+      for (const n of r.back) if (n >= 1 && n <= BACK_MAX) gB[n]++;
+    }
+    for (const r of recent) {
+      for (const n of r.front) if (n >= 1 && n <= FRONT_MAX) rF[n]++;
+      for (const n of r.back) if (n >= 1 && n <= BACK_MAX) rB[n]++;
+    }
+
+    const mix = (g, r, max) => {
+      let gSum = 0, rSum = 0;
+      for (let i = 1; i <= max; i++) { gSum += g[i]; rSum += r[i]; }
+      const w = new Array(max + 1).fill(0);
+      for (let i = 1; i <= max; i++) {
+        const pg = (g[i] + 1) / (gSum + max);      // 拉普拉斯平滑，无零权重
+        const pr = (r[i] + 1) / (rSum + max);
+        w[i] = 0.4 * pg + 0.6 * pr;
+      }
+      return w;
+    };
+    return {
+      front: mix(gF, rF, FRONT_MAX),
+      back: mix(gB, rB, BACK_MAX),
+      globalFront: gF, globalBack: gB, recentFront: rF, recentBack: rB,
+      recentUsed: recent.length
+    };
+  }
+
+  /** 无放回加权抽样（Efraimidis-Spirakis：key = U^(1/w) 取前 k 大），次数固定，不会死循环 */
+  function weightedPick(weights, max, k) {
+    const keys = [];
+    for (let i = 1; i <= max; i++) {
+      keys.push({ n: i, key: Math.pow(Math.random(), 1 / weights[i]) });
+    }
+    keys.sort((a, b) => b.key - a.key);
+    return keys.slice(0, k).map(x => x.n).sort((a, b) => a - b);
+  }
+
+  function predictTickets(history, count) {
+    const w = buildWeights(history);
+    const out = [];
+    for (let i = 0; i < count; i++) {
+      out.push({
+        front: weightedPick(w.front, FRONT_MAX, PICK_FRONT),
+        back: weightedPick(w.back, BACK_MAX, PICK_BACK)
+      });
+    }
+    return out;
+  }
+
+  // ---------------------------------------------------------------
+  // 数据加载（带 localStorage 缓存 + 离线降级）
+  // ---------------------------------------------------------------
+  function readCache() {
+    try {
+      const raw = localStorage.getItem(CACHE_KEY);
+      if (!raw) return null;
+      const obj = JSON.parse(raw);
+      if (!obj || !Array.isArray(obj.records) || !obj.records.length) return null;
+      return obj;
+    } catch (e) { return null; }
+  }
+
+  function writeCache(records) {
+    try {
+      localStorage.setItem(CACHE_KEY, JSON.stringify({ ts: Date.now(), records: records }));
+    } catch (e) { /* 隐私模式或配额满，忽略 */ }
+  }
+
+  function parseRecords(json) {
+    const list = json && json.value && json.value.list;
+    if (!Array.isArray(list)) throw new Error('接口返回结构异常');
+    const out = [];
+    for (const item of list) {
+      const issue = String(item.lotteryDrawNum || '').trim();
+      const date = String(item.lotteryDrawTime || '').trim();
+      const raw = String(item.lotteryDrawResult || '').trim();
+      if (!issue || !raw) continue;
+      const parts = raw.split(/\s+/).map(Number);
+      if (parts.length !== 7 || parts.some(n => !Number.isFinite(n) || n < 1)) continue;
+      out.push({ issue: issue, date: date, front: parts.slice(0, 5), back: parts.slice(5) });
+    }
+    if (!out.length) throw new Error('未解析到有效开奖数据');
+    // 期号降序，最新在前（不依赖接口顺序）
+    out.sort((a, b) => {
+      const na = parseInt(a.issue, 10), nb = parseInt(b.issue, 10);
+      if (Number.isFinite(na) && Number.isFinite(nb) && na !== nb) return nb - na;
+      return b.date.localeCompare(a.date);
+    });
+    return out;
+  }
+
+  async function fetchOnce() {
+    // WebView file:// 下发出的请求可能被 WAF 拒绝（无 Referer/Origin），
+    // 原生层 shouldInterceptRequest 会补头转发；这里仍做超时与重试兜底
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT);
+    try {
+      const res = await fetch(API + '&_=' + Date.now(), { cache: 'no-store', signal: ctrl.signal });
+      if (!res.ok) throw new Error('HTTP ' + res.status);
+      return parseRecords(await res.json());
+    } finally {
+      clearTimeout(timer);
+    }
+  }
+
+  async function fetchHistory(force) {
+    const cached = readCache();
+    const fresh = cached && (Date.now() - cached.ts) < CACHE_TTL;
+    if (cached && !force) {
+      applyHistory(cached.records, true, cached.ts);   // 先秒开本地缓存
+      if (fresh) return;                               // 5 分钟内不再请求
+    } else if (!cached) {
+      setStatus('loading');
+    }
+    let records = null, lastErr = null;
+    for (let attempt = 0; attempt < 2 && !records; attempt++) {
+      try { records = await fetchOnce(); }
+      catch (e) { lastErr = e.name === 'AbortError' ? new Error('请求超时') : e; }
+    }
+    if (records) {
+      writeCache(records);
+      state.usingFallback = false;
+      state.retryCount = 0;
+      applyHistory(records, false, Date.now());
+      return;
+    }
+    if (cached) {
+      applyHistory(cached.records, true, cached.ts);
+      showError('网络不可用，正在使用本地缓存数据（' + fmtTime(cached.ts) + ' 更新），恢复后会自动刷新');
+      scheduleRetry();
+    } else {
+      // 快照用紧凑字段名存储，转成内部记录结构
+      const recs = FALLBACK.map(function (r) {
+        return { issue: String(r.i), date: r.d, front: r.f.slice(), back: r.b.slice() };
+      });
+      state.usingFallback = true;
+      applyHistory(recs, true, Date.now());
+      setStatus('builtin');
+      showError('接口访问失败（' + lastErr.message + '），暂时使用内置离线数据（截至 ' + FALLBACK_DATE + '）。网络恢复后会自动换成最新数据，随机选号不受影响。');
+      scheduleRetry();
+    }
+  }
+
+  /** 离线状态下每 20 秒自动重试一次（最多 5 次），网络恢复立刻换回实时数据 */
+  function scheduleRetry() {
+    if (state.retryTimer || state.retryCount >= 5) return;
+    state.retryTimer = setTimeout(function () {
+      state.retryTimer = 0;
+      state.retryCount++;
+      if (state.usingFallback || state.historyFromCache) fetchHistory(true);
+    }, 20000);
+  }
+
+  function applyHistory(records, fromCache, ts) {
+    state.history = records;
+    state.historyFromCache = fromCache;
+    state.loadedAt = ts || Date.now();
+    setStatus(fromCache ? 'cache' : 'ok');
+    renderStats();
+    renderRecent();
+  }
+
+  function fmtTime(ts) {
+    const d = new Date(ts);
+    return (d.getMonth() + 1) + '-' + d.getDate() + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function setStatus(mode) {
+    const el = $('status');
+    const n = state.history ? state.history.length : 0;
+    if (mode === 'ok') {
+      el.innerHTML = '<span class="dot"></span>' + n + ' 期 · ' + fmtTime(state.loadedAt);
+    } else if (mode === 'cache') {
+      el.innerHTML = '<span class="dot off"></span>缓存 ' + n + ' 期';
+    } else if (mode === 'builtin') {
+      el.innerHTML = '<span class="dot off"></span>离线 ' + n + ' 期';
+    } else if (mode === 'loading') {
+      el.innerHTML = '<span class="dot off"></span>加载中...';
+    } else {
+      el.innerHTML = '<span class="dot off"></span>未加载数据';
+    }
+  }
+
+  /** 用户主动点击预测/统计时，确保数据在 */
+  async function ensureHistory() {
+    if (!state.history) await fetchHistory(false);
+    return state.history;
+  }
+
+  // ---------------------------------------------------------------
+  // 渲染
+  // ---------------------------------------------------------------
+  function ballsHtml(t) {
+    let h = '';
+    for (const n of t.front) h += '<span class="ball front">' + pad(n) + '</span>';
+    h += '<span class="gap"></span>';
+    for (const n of t.back) h += '<span class="ball back">' + pad(n) + '</span>';
+    return h;
+  }
+
+  function renderTickets(containerId, tickets) {
+    const box = $(containerId);
+    if (!tickets || !tickets.length) { box.innerHTML = ''; return; }
+    box.innerHTML = tickets.map((t, i) =>
+      '<div class="ticket"><span class="idx">第' + (i + 1) + '注</span><div class="balls">' + ballsHtml(t) + '</div></div>'
+    ).join('');
+  }
+
+  function freqList(counts, max, totalDraws) {
+    const arr = [];
+    for (let i = 1; i <= max; i++) arr.push({ num: i, count: counts[i] });
+    arr.sort((a, b) => b.count - a.count || a.num - b.num);
+    arr.forEach(x => { x.pct = totalDraws ? Math.round(x.count * 1000 / totalDraws) / 10 : 0; });
+    return arr;
+  }
+
+  function renderStats() {
+    if (!state.history) return;
+    const w = buildWeights(state.history);
+    const useRecent = state.statRange === 'recent';
+    const totalDraws = useRecent ? w.recentUsed : state.history.length;
+    const frontArr = freqList(useRecent ? w.recentFront : w.globalFront, FRONT_MAX, totalDraws);
+    const backArr = freqList(useRecent ? w.recentBack : w.globalBack, BACK_MAX, totalDraws);
+    const maxF = Math.max(...frontArr.map(x => x.count), 1);
+    const maxB = Math.max(...backArr.map(x => x.count), 1);
+
+    $('stats-desc').textContent = '基于最近 ' + state.history.length + ' 期开奖数据';
+    $('seg-global').textContent = '全部 ' + state.history.length + ' 期';
+    $('seg-recent').textContent = '近 ' + w.recentUsed + ' 期';
+
+    const chip = (x, cls, max) =>
+      '<div class="chip"><span class="ball ' + cls + '" style="opacity:' + (0.45 + 0.55 * x.count / max).toFixed(2) + '">'
+      + pad(x.num) + '</span><span class="m"><b>' + x.count + '次</b><span>' + x.pct + '%</span></span></div>';
+
+    $('stats-body').innerHTML =
+      '<div class="side-title">前区热号（红球，出现次数从高到低）</div><div class="chips">'
+      + frontArr.slice(0, 15).map(x => chip(x, 'front', maxF)).join('')
+      + '</div><div class="side-title">后区热号（蓝球）</div><div class="chips">'
+      + backArr.map(x => chip(x, 'back', maxB)).join('') + '</div>';
+  }
+
+  function renderRecent() {
+    if (!state.history) return;
+    const list = state.history.slice(0, 15);
+    $('recent-body').innerHTML = list.map(r =>
+      '<div class="rec"><div class="info"><b>第 ' + escapeHtml(r.issue) + ' 期</b><span>' + escapeHtml(r.date) + '</span></div>'
+      + '<div class="balls">' + ballsHtml(r) + '</div></div>'
+    ).join('');
+  }
+
+  // ---------------------------------------------------------------
+  // 交互
+  // ---------------------------------------------------------------
+  function readCount(id) {
+    const v = parseInt($(id).value, 10);
+    if (!Number.isFinite(v) || v < 1) return 1;
+    if (v > 1000) return 1000;
+    return v;
+  }
+
+  function switchTab(key) {
+    state.tab = key;
+    document.querySelectorAll('.panel').forEach(p => p.classList.toggle('on', p.id === 'panel-' + key));
+    document.querySelectorAll('nav button').forEach(b => b.classList.toggle('on', b.dataset.tab === key));
+    if ((key === 'stats' || key === 'recent') && !state.history) fetchHistory(false);
+    else if (key === 'stats' && state.history) renderStats();
+    else if (key === 'recent' && state.history) renderRecent();
+  }
+
+  async function doRandom() {
+    const n = readCount('count-random');
+    $('count-random').value = n;
+    showError('');
+    const btn = $('btn-random');
+    btn.disabled = true; btn.textContent = '生成中...';
+    try {
+      const out = [];
+      for (let i = 0; i < n; i++) out.push(randomTicket());
+      renderTickets('list-random', out);
+    } finally {
+      btn.disabled = false; btn.textContent = '生成随机号码';
+    }
+  }
+
+  async function doPredict() {
+    const n = readCount('count-predict');
+    $('count-predict').value = n;
+    showError('');
+    const btn = $('btn-predict');
+    btn.disabled = true; btn.textContent = '生成中...';
+    try {
+      const history = await ensureHistory();
+      if (!history) { showError('没有历史数据，无法预测。请检查网络后重试。'); return; }
+      renderTickets('list-predict', predictTickets(history, n));
+      $('predict-desc').textContent = '基于最近 ' + history.length + ' 期数据 · 全局频率 40% + 近 '
+        + Math.min(RECENT_N, history.length) + ' 期频率 60% 加权';
+    } finally {
+      btn.disabled = false; btn.textContent = '生成预测号码';
+    }
+  }
+
+  // 事件绑定
+  document.querySelectorAll('nav button').forEach(b => {
+    b.addEventListener('click', () => switchTab(b.dataset.tab));
+  });
+  document.querySelectorAll('.stepper button[data-step]').forEach(b => {
+    b.addEventListener('click', () => {
+      const input = $('count-' + b.dataset.step);
+      let v = parseInt(input.value, 10);
+      if (!Number.isFinite(v)) v = 1;
+      v = Math.min(1000, Math.max(1, v + parseInt(b.dataset.d, 10)));
+      input.value = v;
+    });
+  });
+  $('btn-random').addEventListener('click', doRandom);
+  $('btn-predict').addEventListener('click', doPredict);
+  $('seg-global').addEventListener('click', () => {
+    state.statRange = 'global';
+    $('seg-global').classList.add('on'); $('seg-recent').classList.remove('on');
+    renderStats();
+  });
+  $('seg-recent').addEventListener('click', () => {
+    state.statRange = 'recent';
+    $('seg-recent').classList.add('on'); $('seg-global').classList.remove('on');
+    renderStats();
+  });
+
+  // 双击状态栏区域可强制刷新数据
+  $('status').addEventListener('click', () => fetchHistory(true));
+
+  // 启动
+  setStatus('loading');
+  fetchHistory(false);
+
+  // 网络恢复 / 应用回到前台：立刻换成实时数据
+  window.addEventListener('online', function () {
+    if (state.usingFallback || state.historyFromCache) fetchHistory(true);
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (document.visibilityState === 'visible' && (state.usingFallback || state.historyFromCache)) {
+      fetchHistory(true);
+    }
+  });
+
+  // 离线壳缓存：仅 HTTPS 下注册（iOS 添加到主屏幕后离线可用）；HTTP/APK 内静默跳过
+  if ('serviceWorker' in navigator && location.protocol === 'https:') {
+    window.addEventListener('load', function () {
+      navigator.serviceWorker.register('sw.js').catch(function () { /* 忽略 */ });
+    });
+  }
+
+  // 测试钩子：供 node 冒烟测试调用，不影响正常使用
+  window.__dlt = {
+    randomTicket: randomTicket,
+    buildWeights: buildWeights,
+    weightedPick: weightedPick,
+    predictTickets: predictTickets,
+    parseRecords: parseRecords,
+    getState: function () { return state; }
+  };
+})();
+</script>
+</body>
+</html>

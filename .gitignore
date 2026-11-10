@@ -97,3 +97,37 @@ $RECYCLE.BIN/
 data/local/
 test-output/
 coverage/
+
+# ==================================================
+# 以下是本项目（lottery）专属规则
+# ==================================================
+
+# ---------- Maven 构建输出 ----------
+# 编译出来的 class、shade 后的 jar 都在这里，全部重新生成即可
+target/
+
+# ---------- 打包产物：整目录排除 ----------
+# packaging/ 内含 JRE(rt.jar 60MB)、Android SDK(lld.exe 38MB)、
+# 安装包 exe(26MB)、apk —— 合计 512MB，属于构建产物，不纳入版本控制
+packaging/
+
+# ---------- 制品文件 ----------
+*.jar
+*.apk
+*.exe
+*.msi
+*.dmg
+*.zip
+*.7z
+
+# ---------- 本地工具配置 ----------
+.idea/
+.claude/
+.workbuddy/
+
+# ---------- 构建中间产物 ----------
+*.class
+*.war
+*.ear
+hs_err_pid*
+replay_pid*

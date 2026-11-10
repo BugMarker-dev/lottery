@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>财富密码</title>
+<style>
+* { margin: 0; padding: 0; box-sizing: border-box; }
+body {
+  font-family: -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f4f5f7; color: #2b2f36; min-height: 100vh;
+  display: flex; justify-content: center;
+}
+.app { width: 100%; max-width: 720px; padding: 20px 16px 48px; }
+header { text-align: center; padding: 18px 0 14px; }
+header h1 { font-size: 22px; font-weight: 600; letter-spacing: 1px; }
+header p { margin-top: 6px; font-size: 13px; color: #8a9099; }
+
+nav { display: flex; background: #e8eaee; border-radius: 12px; padding: 4px; margin: 12px 0 20px; }
+nav button {
+  flex: 1; border: 0; background: transparent; padding: 10px 0; font-size: 14px;
+  color: #6b7078; border-radius: 9px; cursor: pointer; transition: all .15s;
+}
+nav button.active { background: #fff; color: #e0453e; font-weight: 600; box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+.card { background: #fff; border-radius: 14px; padding: 18px; box-shadow: 0 1px 6px rgba(0,0,0,.06); margin-bottom: 16px; }
+.card h2 { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+.card .desc { font-size: 12px; color: #9aa0a8; margin-bottom: 14px; }
+
+.stepper { display: flex; align-items: center; gap: 12px; margin: 12px 0 16px; }
+.stepper button {
+  width: 36px; height: 36px; border: 1px solid #d8dbe0; background: #fff; border-radius: 10px;
+  font-size: 18px; cursor: pointer; color: #444; line-height: 1;
+}
+.stepper button:active { background: #f0f1f3; }
+.stepper input {
+  width: 72px; height: 36px; text-align: center; font-size: 16px; border: 1px solid #d8dbe0;
+  border-radius: 10px; outline: none; -moz-appearance: textfield;
+}
+.stepper input::-webkit-inner-spin-button { display: none; }
+.stepper .unit { font-size: 13px; color: #8a9099; }
+
+.btn-main {
+  width: 100%; border: 0; background: #e0453e; color: #fff; font-size: 15px; font-weight: 600;
+  padding: 12px 0; border-radius: 12px; cursor: pointer; letter-spacing: 2px;
+}
+.btn-main:active { opacity: .85; }
+.btn-main:disabled { opacity: .5; cursor: default; }
+.btn-blue { background: #2f6fd6; }
+
+.tickets { margin-top: 16px; }
+.ticket {
+  display: flex; align-items: center; padding: 12px 10px; border-top: 1px solid #f0f1f3;
+}
+.ticket .idx { width: 34px; font-size: 12px; color: #9aa0a8; flex-shrink: 0; }
+.balls { display: flex; flex-wrap: wrap; gap: 6px; }
+.ball {
+  width: 32px; height: 32px; border-radius: 50%; color: #fff; font-size: 13px; font-weight: 600;
+  display: flex; align-items: center; justify-content: center;
+}
+.ball.front { background: #e0453e; }
+.ball.back { background: #2f6fd6; }
+.divider { width: 14px; flex-shrink: 0; }
+
+.banner { padding: 10px 14px; border-radius: 10px; font-size: 13px; margin-bottom: 14px; }
+.banner.err { background: #fdeeee; color: #c0392b; }
+.banner.info { background: #eef4fd; color: #2f6fd6; }
+
+.range-switch { display: flex; gap: 8px; margin-bottom: 14px; }
+.range-switch button {
+  border: 1px solid #d8dbe0; background: #fff; padding: 6px 14px; border-radius: 20px;
+  font-size: 12px; color: #6b7078; cursor: pointer;
+}
+.range-switch button.active { background: #2b2f36; color: #fff; border-color: #2b2f36; }
+
+.chips { display: flex; flex-wrap: wrap; gap: 8px; }
+.chip {
+  display: flex; align-items: center; gap: 7px; padding: 6px 10px; border-radius: 10px;
+  background: #f7f8fa; font-size: 12px;
+}
+.chip .ball { width: 26px; height: 26px; font-size: 12px; }
+.chip .meta { line-height: 1.3; }
+.chip .meta b { font-size: 12px; }
+.chip .meta span { display: block; color: #9aa0a8; font-size: 11px; }
+.side-title { font-size: 13px; font-weight: 600; color: #6b7078; margin: 14px 0 8px; }
+
+.record { display: flex; align-items: center; padding: 11px 4px; border-top: 1px solid #f0f1f3; flex-wrap: wrap; gap: 6px; }
+.record:first-child { border-top: 0; }
+.record .info { width: 118px; flex-shrink: 0; }
+.record .info b { font-size: 13px; display: block; }
+.record .info span { font-size: 11px; color: #9aa0a8; }
+
+.empty { text-align: center; color: #9aa0a8; font-size: 13px; padding: 26px 0; }
+.spin { display: inline-block; width: 14px; height: 14px; border: 2px solid #d8dbe0; border-top-color: #e0453e; border-radius: 50%; animation: r .7s linear infinite; vertical-align: -2px; margin-right: 6px; }
+@keyframes r { to { transform: rotate(360deg); } }
+.disclaimer { font-size: 11px; color: #b0b5bd; text-align: center; margin-top: 22px; line-height: 1.6; }
+</style>
+</head>
+<body>
+<div id="app" class="app">
+  <header>
+    <h1>财富密码</h1>
+    <p>前区 01-35 选 5 个 &nbsp;·&nbsp; 后区 01-12 选 2 个</p>
+  </header>
+
+  <nav>
+    <button v-for="t in tabs" :key="t.key" :class="{active: tab===t.key}" @click="switchTab(t.key)">{{ t.label }}</button>
+  </nav>
+
+  <div v-if="error" class="banner err">{{ error }}</div>
+
+  <!-- 随机 -->
+  <template v-if="tab==='random'">
+    <div class="card">
+      <h2>随机选号</h2>
+      <div class="desc">纯随机，每注概率完全相同</div>
+      <div class="stepper">
+        <button @click="count = Math.max(1, count-1)">−</button>
+        <input type="number" v-model.number="count" min="1" max="1000">
+        <button @click="count = Math.min(1000, count+1)">＋</button>
+        <span class="unit">注（1-1000）</span>
+      </div>
+      <button class="btn-main" :disabled="loading" @click="generate('random')">
+        {{ loading ? '生成中...' : '生成随机号码' }}
+      </button>
+      <div class="tickets" v-if="randomTickets.length">
+        <div class="ticket" v-for="(t,i) in randomTickets" :key="'r'+i">
+          <span class="idx">第{{ i+1 }}注</span>
+          <div class="balls">
+            <span class="ball front" v-for="n in t.front" :key="'f'+n">{{ pad(n) }}</span>
+            <span class="divider"></span>
+            <span class="ball back" v-for="n in t.back" :key="'b'+n">{{ pad(n) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- 预测 -->
+  <template v-if="tab==='predict'">
+    <div class="card">
+      <h2>热号预测</h2>
+      <div class="desc" v-if="predictTickets.length && predictTotal">
+        基于最近 {{ predictTotal }} 期数据 · 全局频率 40% + 近 30 期频率 60% 加权
+      </div>
+      <div class="desc" v-else>基于历史开奖数据的热号加权抽样</div>
+      <div class="stepper">
+        <button @click="pCount = Math.max(1, pCount-1)">−</button>
+        <input type="number" v-model.number="pCount" min="1" max="1000">
+        <button @click="pCount = Math.min(1000, pCount+1)">＋</button>
+        <span class="unit">注（1-1000）</span>
+      </div>
+      <button class="btn-main btn-blue" :disabled="loading" @click="generate('predict')">
+        {{ loading ? '生成中...' : '生成预测号码' }}
+      </button>
+      <div class="tickets" v-if="predictTickets.length">
+        <div class="ticket" v-for="(t,i) in predictTickets" :key="'p'+i">
+          <span class="idx">第{{ i+1 }}注</span>
+          <div class="balls">
+            <span class="ball front" v-for="n in t.front" :key="'f'+n">{{ pad(n) }}</span>
+            <span class="divider"></span>
+            <span class="ball back" v-for="n in t.back" :key="'b'+n">{{ pad(n) }}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </template>
+
+  <!-- 统计 -->
+  <template v-if="tab==='stats'">
+    <div class="card">
+      <h2>号码统计</h2>
+      <div class="desc" v-if="stats">基于最近 {{ stats.total }} 期开奖数据</div>
+      <div class="range-switch">
+        <button :class="{active: statRange==='global'}" @click="statRange='global'">全部 {{ stats ? stats.total : '' }} 期</button>
+        <button :class="{active: statRange==='recent'}" @click="statRange='recent'">近 {{ stats ? stats.recentN : 30 }} 期</button>
+      </div>
+      <template v-if="stats">
+        <div class="side-title">前区热号（红）</div>
+        <div class="chips">
+          <div class="chip" v-for="s in stats.front[statRange].slice(0,15)" :key="'f'+s.num">
+            <span class="ball front" :style="{opacity: 0.45 + 0.55*s.count/maxCount}">{{ pad(s.num) }}</span>
+            <span class="meta"><b>{{ s.count }}次</b><span>{{ s.pct }}%</span></span>
+          </div>
+        </div>
+        <div class="side-title">后区热号（蓝）</div>
+        <div class="chips">
+          <div class="chip" v-for="s in stats.back[statRange]" :key="'b'+s.num">
+            <span class="ball back" :style="{opacity: 0.45 + 0.55*s.count/maxCount}">{{ pad(s.num) }}</span>
+            <span class="meta"><b>{{ s.count }}次</b><span>{{ s.pct }}%</span></span>
+          </div>
+        </div>
+      </template>
+      <div v-else class="empty"><span class="spin"></span>加载统计中...</div>
+    </div>
+  </template>
+
+  <!-- 记录 -->
+  <template v-if="tab==='recent'">
+    <div class="card">
+      <h2>最近开奖</h2>
+      <div class="desc">数据来自体彩官方接口</div>
+      <template v-if="recent.length">
+        <div class="record" v-for="r in recent" :key="r.issue">
+          <div class="info"><b>第 {{ r.issue }} 期</b><span>{{ r.date }}</span></div>
+          <div class="balls">
+            <span class="ball front" v-for="n in r.front" :key="'f'+n">{{ pad(n) }}</span>
+            <span class="divider"></span>
+            <span class="ball back" v-for="n in r.back" :key="'b'+n">{{ pad(n) }}</span>
+          </div>
+        </div>
+      </template>
+      <div v-else class="empty"><span class="spin"></span>加载开奖记录中...</div>
+    </div>
+  </template>
+
+  <p class="disclaimer">
+    号码仅供娱乐，开奖为独立随机事件，历史数据不构成任何中奖概率优势。<br>
+    请理性购彩 · 未满 18 周岁禁止购彩
+  </p>
+</div>
+
+<script src="/vue.global.prod.js"></script>
+<script>
+const { createApp } = Vue;
+
+createApp({
+  data() {
+    return {
+      tabs: [
+        { key: 'random', label: '随机' },
+        { key: 'predict', label: '预测' },
+        { key: 'stats', label: '统计' },
+        { key: 'recent', label: '记录' }
+      ],
+      tab: 'random',
+      count: 5,
+      pCount: 3,
+      randomTickets: [],
+      predictTickets: [],
+      predictTotal: 0,
+      loading: false,
+      error: '',
+      stats: null,
+      statRange: 'global',
+      recent: []
+    };
+  },
+  computed: {
+    maxCount() {
+      const side = this.statRange === 'recent'
+        ? this.stats.front.recent
+        : this.stats.front.global;
+      return Math.max(...side.map(s => s.count), 1);
+    }
+  },
+  methods: {
+    pad(n) { return String(n).padStart(2, '0'); },
+
+    async api(path) {
+      const res = await fetch(path);
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || ('HTTP ' + res.status));
+      return data;
+    },
+
+    switchTab(key) {
+      this.tab = key;
+      if (key === 'stats' && !this.stats) this.loadStats();
+      if (key === 'recent' && !this.recent.length) this.loadRecent();
+    },
+
+    async generate(mode) {
+      const n = mode === 'random' ? this.count : this.pCount;
+      if (!Number.isInteger(n) || n < 1 || n > 1000) {
+        this.error = '注数必须是 1-1000 的整数';
+        return;
+      }
+      this.error = '';
+      this.loading = true;
+      try {
+        const path = mode === 'predict' ? '/api/predict' : '/api/generate';
+        const data = await this.api(path + '?count=' + n);
+        if (mode === 'random') {
+          this.randomTickets = data.tickets;
+        } else {
+          this.predictTickets = data.tickets;
+          if (data.total) this.predictTotal = data.total;
+        }
+      } catch (e) {
+        this.error = '生成失败：' + e.message;
+      } finally {
+        this.loading = false;
+      }
+    },
+
+    async loadStats() {
+      try {
+        this.stats = await this.api('/api/stats');
+      } catch (e) {
+        this.error = '统计加载失败：' + e.message;
+      }
+    },
+
+    async loadRecent() {
+      try {
+        const data = await this.api('/api/recent?count=15');
+        this.recent = data.records;
+      } catch (e) {
+        this.error = '记录加载失败：' + e.message;
+      }
+    }
+  }
+}).mount('#app');
+</script>
+</body>
+</html>
