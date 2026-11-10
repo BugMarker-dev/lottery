@@ -1,0 +1,99 @@
+# ---------- 密钥 / 环境变量（最优先，绝不能提交） ----------
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+secrets.json
+config.local.*
+
+# ---------- 依赖 ----------
+node_modules/
+.pnp
+.pnp.js
+bower_components/
+vendor/
+.venv/
+venv/
+env/
+__pypackages__/
+
+# ---------- 构建产物 ----------
+dist/
+build/
+out/
+.next/
+.nuxt/
+.output/
+target/
+*.exe
+*.dll
+*.so
+*.dylib
+*.class
+*.o
+*.obj
+
+# ---------- 日志 / 临时文件 ----------
+*.log
+logs/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+*.tmp
+*.temp
+*.bak
+*.swp
+*~
+
+# ---------- Python ----------
+__pycache__/
+*.py[cod]
+*$py.class
+*.egg-info/
+.eggs/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+.coverage.*
+htmlcov/
+.ipynb_checkpoints/
+
+# ---------- 缓存 ----------
+.cache/
+.parcel-cache/
+.eslintcache
+.stylelintcache
+.turbo/
+.tsbuildinfo
+
+# ---------- 编辑器 / IDE ----------
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json.example
+.idea/
+*.iml
+*.suo
+*.user
+*.sublime-workspace
+
+# ---------- 操作系统 ----------
+.DS_Store
+.DS_Store?
+._*
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ---------- 本地数据 / 测试输出 ----------
+*.sqlite
+*.sqlite3
+*.db
+!schema.db
+data/local/
+test-output/
+coverage/
