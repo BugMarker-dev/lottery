@@ -1,11 +1,43 @@
 #!/bin/bash
 # 大乐透安卓 APK 构建脚本（不依赖 Gradle / Android Studio）
-# 依赖：JDK 8 + sdk/android-11 下的 platform(android.jar) 与 build-tools
-# 用法：bash build-apk.sh
+# 依赖：JDK 8+ + sdk/android-11 下的 platform(android.jar) 与 build-tools
+# 用法：export LOTTERY_KS_PASS='密钥密码'; bash build-apk.sh
 set -e
 
 cd "$(dirname "$0")"
 PROJ="$(pwd)"
+
+# ---------------------------------------------------------------
+# 工具链自适应：PATH 里没有 javac 时，退回 JetBrains IDE 自带的 JBR。
+# JBR 是裁剪过的运行时，没有 jar.exe，所以下面用 python 版 jar 兜底。
+# ---------------------------------------------------------------
+if ! command -v javac >/dev/null 2>&1; then
+  for c in /d/JetBrains/*/jbr /c/Program\ Files/JetBrains/*/jbr "$LOCALAPPDATA/Programs"/*/jbr; do
+    if [ -x "$c/bin/javac.exe" ]; then
+      PATH="$c/bin:$PATH"; export PATH
+      echo "未找到系统 JDK，改用 JetBrains 运行时：$c"
+      break
+    fi
+  done
+fi
+command -v javac >/dev/null 2>&1 || { echo "错误：找不到 javac，请安装 JDK 8+ 并加入 PATH"; exit 1; }
+
+if ! command -v jar >/dev/null 2>&1; then
+  # 只实现本脚本用到的 jar uf <apk> -C <dir> <entry>
+  jar() {
+    local apk dir entry
+    apk="$(cygpath -w "$2" 2>/dev/null || echo "$2")"
+    dir="$(cygpath -w "$4" 2>/dev/null || echo "$4")"
+    entry="$5"
+    python - "$apk" "$dir" "$entry" <<'PY'
+import sys, os, zipfile
+apk, d, f = sys.argv[1], sys.argv[2], sys.argv[3]
+with zipfile.ZipFile(apk, 'a') as z:
+    z.write(os.path.join(d, f), f)
+PY
+  }
+  echo "未找到 jar，已启用 python 版 jar（仅支持 uf -C）"
+fi
 SDK="$PROJ/sdk/android-11"
 AJAR="$SDK/android.jar"
 OUT="$PROJ/../DaLeTou.apk"
@@ -56,12 +88,21 @@ javac -encoding UTF-8 -source 8 -target 8 -bootclasspath "$AJAR" \
   > build/javac.log 2>&1 || { cat build/javac.log; exit 1; }
 grep -v "bootstrap class path" build/javac.log || true
 
-echo "=== 4. dex（d8） ==="
+echo "=== 4. dex（优先 d8，失败回退 dx） ==="
 mkdir -p build/dex
-java -cp "$SDK/lib/d8.jar" com.android.tools.r8.D8 \
-  --lib "$AJAR" --min-api 21 --release \
-  --output build/dex \
-  $(find build/classes -name "*.class")
+# 新版 JDK（如 17/21/25）编译出的匿名内部类属性，2020 年的旧 d8 会抛内部 NPE，
+# 这时退回 build-tools 29 自带的 dx。本项目没有 Java 8 默认方法，无需脱糖。
+if ! java -cp "$SDK/lib/d8.jar" com.android.tools.r8.D8 \
+      --lib "$AJAR" --min-api 21 --release \
+      --output build/dex \
+      $(find build/classes -name "*.class") > build/d8.log 2>&1; then
+  echo "d8 编译失败，改用 dx："
+  head -3 build/d8.log
+  rm -rf build/dex && mkdir -p build/dex
+  java -cp "$PROJ/sdk/bt29/android-10/lib/dx.jar" com.android.dx.command.Main \
+    --dex --min-sdk-version=21 --output=build/dex/classes.dex build/classes
+fi
+ls -la build/dex
 
 echo "=== 5. 打包并 zipalign ==="
 cp build/base.apk build/unsigned.apk
