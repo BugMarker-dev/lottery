@@ -144,6 +144,68 @@
   nav button.on svg { stroke: var(--red); }
   nav button:active { background: #fafafa; }
 
+  /* 保留 / 待打票 */
+  .ticket .balls { flex: 1; }
+  .pin {
+    flex-shrink: 0; width: 34px; height: 34px; border-radius: 50%;
+    border: 1px solid #dcdfe4; background: #fff; color: #b6bbc3;
+    font-size: 16px; line-height: 1; display: flex; align-items: center; justify-content: center;
+    margin-left: 8px; transition: transform .12s, background .15s, border-color .15s;
+  }
+  .pin:active { transform: scale(.9); }
+  .pin.on { background: var(--red); border-color: var(--red); color: #fff; }
+  .pin.on[data-src="predict"] { background: var(--blue); border-color: var(--blue); }
+
+  .pinbar {
+    position: fixed; left: 14px; right: 14px;
+    bottom: calc(var(--nav-h) + 12px + env(safe-area-inset-bottom));
+    height: 46px; border: 0; border-radius: 23px;
+    background: var(--ink); color: #fff; font-size: 13px;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0 18px; box-shadow: 0 4px 16px rgba(0,0,0,.18);
+    z-index: 40; transform: translateY(80px); opacity: 0; pointer-events: none;
+    transition: transform .25s, opacity .25s;
+  }
+  .pinbar.on { transform: translateY(0); opacity: 1; pointer-events: auto; }
+  .pinbar b { font-size: 15px; margin: 0 3px; }
+  .pinbar .go { opacity: .7; }
+  body.pin-on main { padding-bottom: calc(86px + env(safe-area-inset-bottom)); }
+
+  .mask {
+    position: fixed; inset: 0; background: rgba(20,22,26,.45); z-index: 50;
+    opacity: 0; pointer-events: none; transition: opacity .25s;
+  }
+  .mask.on { opacity: 1; pointer-events: auto; }
+  .sheet {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 51;
+    background: var(--card); border-radius: 18px 18px 0 0;
+    max-height: 78vh; display: flex; flex-direction: column;
+    padding-bottom: env(safe-area-inset-bottom);
+    transform: translateY(100%); transition: transform .3s cubic-bezier(.32,.72,0,1);
+  }
+  .sheet.on { transform: translateY(0); }
+  .sheet-hd {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 16px 18px 12px; border-bottom: 1px solid var(--line);
+  }
+  .sheet-hd b { font-size: 15px; font-weight: 600; }
+  .sheet-hd button { border: 0; background: transparent; color: var(--muted); font-size: 13px; padding: 4px; }
+  .sheet-bd { flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: 2px 18px; }
+  .sheet-ft { display: flex; gap: 10px; padding: 12px 18px 16px; border-top: 1px solid var(--line); }
+  .sheet-ft button { flex: 1; border: 0; border-radius: 12px; padding: 12px 0; font-size: 14px; font-weight: 600; }
+  .sheet-ft .ghost { background: #f2f3f5; color: #5f646c; }
+  .sheet-ft .solid { background: var(--red); color: #fff; }
+
+  .bill { display: flex; align-items: center; gap: 8px; padding: 11px 0; border-top: 1px solid var(--line); }
+  .bill:first-child { border-top: 0; }
+  .bill .no { width: 24px; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .bill .balls { flex: 1; }
+  .bill .ball { width: 27px; height: 27px; font-size: 12px; }
+  .bill .del {
+    width: 28px; height: 28px; flex-shrink: 0; border: 0; border-radius: 8px;
+    background: #f5f6f8; color: #9aa0a8; font-size: 15px; line-height: 1;
+  }
+
   /* 复制提示 */
   .toast {
     position: fixed; left: 50%; bottom: calc(var(--nav-h) + 24px); transform: translateX(-50%) translateY(10px);
@@ -242,6 +304,24 @@
   </button>
 </nav>
 
+<button type="button" class="pinbar" id="pinbar">
+  <span>待打票 <b id="pinbar-n">0</b> 注</span>
+  <span class="go">查看清单 ›</span>
+</button>
+
+<div class="mask" id="mask"></div>
+<div class="sheet" id="sheet">
+  <div class="sheet-hd">
+    <b>待打票 <span id="pin-count">0</span> 注</b>
+    <button type="button" id="sheet-close">关闭</button>
+  </div>
+  <div class="sheet-bd" id="pin-list"></div>
+  <div class="sheet-ft">
+    <button type="button" class="ghost" id="btn-pin-clear">清空</button>
+    <button type="button" class="solid" id="btn-pin-copy">复制文本</button>
+  </div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
@@ -255,6 +335,8 @@
   const CACHE_KEY = 'dlt_history_v1';
   const CACHE_TTL = 5 * 60 * 1000;    // 5 分钟（超过则后台刷新，界面先显示缓存）
   const FETCH_TIMEOUT = 10000;        // 单次请求超时 10s
+  const PIN_KEY = 'dlt_pinned_v1';    // 待打票清单（与桌面版同源共享）
+  const PIN_MAX = 50;                 // 清单上限，防止误点堆成一片
 
   // 内置离线快照（打包时生成）：接口完全不可用时兜底，保证预测/统计/记录可用
   const FALLBACK_DATE = '2026-11-09';
@@ -269,7 +351,8 @@
     error: '',
     usingFallback: false, // 是否正在用内置快照兜底
     retryCount: 0,
-    retryTimer: 0
+    retryTimer: 0,
+    lists: { random: [], predict: [] }   // 当前两页生成的号码，供「保留」按索引取用
   };
 
   const $ = (id) => document.getElementById(id);
@@ -304,6 +387,118 @@
 
   function escapeHtml(s) {
     return String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  }
+
+  // ---------------------------------------------------------------
+  // 待打票清单：挑中的号码暂存本地，方便一次拿到彩票店
+  // 存 localStorage 而不是服务端，因为这个清单生命周期只有"选号 → 去店里 → 打完"
+  // 桌面版 index.html 与手机版同源，共用同一个 key
+  // ---------------------------------------------------------------
+  let pinned = loadPinned();
+
+  function loadPinned() {
+    try {
+      const raw = localStorage.getItem(PIN_KEY);
+      const arr = raw ? JSON.parse(raw) : [];
+      if (!Array.isArray(arr)) return [];
+      return arr.filter(x => x && Array.isArray(x.f) && x.f.length === PICK_FRONT
+                             && Array.isArray(x.b) && x.b.length === PICK_BACK);
+    } catch (e) { return []; }
+  }
+
+  function savePinned() {
+    try { localStorage.setItem(PIN_KEY, JSON.stringify(pinned)); } catch (e) { /* 配额满，忽略 */ }
+  }
+
+  const keyOfTicket = (t) => t.front.join(',') + '|' + t.back.join(',');
+  const keyOfPinned = (x) => x.f.join(',') + '|' + x.b.join(',');
+
+  function isPinned(t) {
+    const k = keyOfTicket(t);
+    return pinned.some(x => keyOfPinned(x) === k);
+  }
+
+  function togglePin(t, src) {
+    const k = keyOfTicket(t);
+    const idx = pinned.findIndex(x => keyOfPinned(x) === k);
+    if (idx >= 0) {
+      pinned.splice(idx, 1);
+      savePinned(); syncPinUI();
+      toast('已从清单移除');
+      return;
+    }
+    if (pinned.length >= PIN_MAX) {
+      toast('清单最多 ' + PIN_MAX + ' 注，请先清空');
+      return;
+    }
+    pinned.push({ f: t.front.slice(), b: t.back.slice(), src: src, ts: Date.now() });
+    savePinned(); syncPinUI();
+    toast('已保留，共 ' + pinned.length + ' 注');
+  }
+
+  function pinsText() {
+    return pinned.map(x => x.f.map(pad).join(' ') + '  +  ' + x.b.map(pad).join(' ')).join('\n');
+  }
+
+  function syncPinUI() {
+    const n = pinned.length;
+    $('pinbar-n').textContent = n;
+    $('pin-count').textContent = n;
+    $('pinbar').classList.toggle('on', n > 0);
+    document.body.classList.toggle('pin-on', n > 0);
+    document.querySelectorAll('.pin').forEach(btn => {
+      const list = state.lists[btn.dataset.src] || [];
+      const t = list[parseInt(btn.dataset.i, 10)];
+      const on = !!t && isPinned(t);
+      btn.classList.toggle('on', on);
+      btn.textContent = on ? '✓' : '＋';
+      btn.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+    if ($('sheet').classList.contains('on')) renderPinned();
+  }
+
+  function renderPinned() {
+    const box = $('pin-list');
+    if (!pinned.length) {
+      box.innerHTML = '<div class="empty">还没有保留的号码<br>在号码右侧点 ＋ 就能加进来</div>';
+      return;
+    }
+    box.innerHTML = pinned.map((x, i) =>
+      '<div class="bill"><span class="no">' + (i + 1) + '</span>'
+      + '<div class="balls">' + ballsHtml({ front: x.f, back: x.b }) + '</div>'
+      + '<button type="button" class="del" data-del="' + i + '" aria-label="删除这注">×</button></div>'
+    ).join('');
+  }
+
+  function openSheet() {
+    renderPinned();
+    $('mask').classList.add('on');
+    $('sheet').classList.add('on');
+  }
+
+  function closeSheet() {
+    $('mask').classList.remove('on');
+    $('sheet').classList.remove('on');
+  }
+
+  async function copyPins() {
+    if (!pinned.length) { toast('清单是空的'); return; }
+    const text = pinsText();
+    try {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        await navigator.clipboard.writeText(text);
+      } else {
+        const ta = document.createElement('textarea');
+        ta.value = text;
+        ta.style.cssText = 'position:fixed;opacity:0;top:0;left:0';
+        document.body.appendChild(ta);
+        ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta);
+      }
+      toast('已复制 ' + pinned.length + ' 注');
+    } catch (e) {
+      toast('复制失败，可长按下方号码手动选择');
+    }
   }
 
   // ---------------------------------------------------------------
@@ -536,12 +731,17 @@
     return h;
   }
 
-  function renderTickets(containerId, tickets) {
+  function renderTickets(containerId, tickets, src) {
     const box = $(containerId);
+    state.lists[src] = tickets || [];
     if (!tickets || !tickets.length) { box.innerHTML = ''; return; }
     box.innerHTML = tickets.map((t, i) =>
-      '<div class="ticket"><span class="idx">第' + (i + 1) + '注</span><div class="balls">' + ballsHtml(t) + '</div></div>'
+      '<div class="ticket"><span class="idx">第' + (i + 1) + '注</span>'
+      + '<div class="balls">' + ballsHtml(t) + '</div>'
+      + '<button type="button" class="pin" data-src="' + src + '" data-i="' + i + '"'
+      + ' aria-label="保留这注" aria-pressed="false">＋</button></div>'
     ).join('');
+    syncPinUI();
   }
 
   function freqList(counts, max, totalDraws) {
@@ -614,7 +814,7 @@
     try {
       const out = [];
       for (let i = 0; i < n; i++) out.push(randomTicket());
-      renderTickets('list-random', out);
+      renderTickets('list-random', out, 'random');
     } finally {
       btn.disabled = false; btn.textContent = '生成随机号码';
     }
@@ -629,7 +829,7 @@
     try {
       const history = await ensureHistory();
       if (!history) { showError('没有历史数据，无法预测。请检查网络后重试。'); return; }
-      renderTickets('list-predict', predictTickets(history, n));
+      renderTickets('list-predict', predictTickets(history, n), 'predict');
       $('predict-desc').textContent = '基于最近 ' + history.length + ' 期数据 · 全局频率 40% + 近 '
         + Math.min(RECENT_N, history.length) + ' 期频率 60% 加权';
     } finally {
@@ -652,6 +852,36 @@
   });
   $('btn-random').addEventListener('click', doRandom);
   $('btn-predict').addEventListener('click', doPredict);
+
+  // 保留按钮：用事件委托，重新生成号码后不用重绑
+  document.querySelectorAll('.tickets').forEach(box => {
+    box.addEventListener('click', function (e) {
+      const btn = e.target.closest('.pin');
+      if (!btn) return;
+      const list = state.lists[btn.dataset.src] || [];
+      const t = list[parseInt(btn.dataset.i, 10)];
+      if (t) togglePin(t, btn.dataset.src);
+    });
+  });
+
+  $('pinbar').addEventListener('click', openSheet);
+  $('mask').addEventListener('click', closeSheet);
+  $('sheet-close').addEventListener('click', closeSheet);
+  $('btn-pin-copy').addEventListener('click', copyPins);
+  $('btn-pin-clear').addEventListener('click', function () {
+    if (!pinned.length) return;
+    if (!confirm('清空待打票清单？共 ' + pinned.length + ' 注')) return;
+    pinned = [];
+    savePinned(); syncPinUI();
+    toast('已清空');
+  });
+  $('pin-list').addEventListener('click', function (e) {
+    const btn = e.target.closest('.del');
+    if (!btn) return;
+    pinned.splice(parseInt(btn.dataset.del, 10), 1);
+    savePinned(); syncPinUI();
+  });
+
   $('seg-global').addEventListener('click', () => {
     state.statRange = 'global';
     $('seg-global').classList.add('on'); $('seg-recent').classList.remove('on');
@@ -668,6 +898,7 @@
 
   // 启动
   setStatus('loading');
+  syncPinUI();          // 恢复上次没打完的清单
   fetchHistory(false);
 
   // 网络恢复 / 应用回到前台：立刻换成实时数据
@@ -694,6 +925,9 @@
     weightedPick: weightedPick,
     predictTickets: predictTickets,
     parseRecords: parseRecords,
+    togglePin: togglePin,
+    pinsText: pinsText,
+    getPinned: function () { return pinned; },
     getState: function () { return state; }
   };
 })();

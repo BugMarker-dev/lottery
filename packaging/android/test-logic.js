@@ -14,12 +14,13 @@ const src = m[1];
 const listeners = {};
 const fakeEl = () => ({
   textContent: '', innerHTML: '', value: '5', classList: {
-    add() {}, remove() {}, toggle() {}
+    add() {}, remove() {}, toggle() {}, contains() { return false; }
   },
-  addEventListener() {}, dataset: {}
+  setAttribute() {}, addEventListener() {}, dataset: {}
 });
 const els = {};
 global.document = {
+  body: fakeEl(),
   getElementById: (id) => (els[id] = els[id] || fakeEl()),
   querySelectorAll: () => [],
   createElement: () => fakeEl()
@@ -115,6 +116,16 @@ check('parseRecords：脏数据被过滤（剩 2 条）', parsed.length === 2);
 check('parseRecords：期号降序（' + parsed.map(r => r.issue).join(',') + '）',
   parsed[0].issue === '25003' && parsed[1].issue === '25001');
 check('parseRecords：号码切分正确', parsed[0].front.length === 5 && parsed[0].back.join() === '9,12');
+
+// ---- 5.5 待打票清单 ----
+dlt.getPinned().length = 0;   // 清空，避免受历史数据影响
+dlt.togglePin({ front: [1, 2, 3, 4, 5], back: [1, 2] }, 'random');
+dlt.togglePin({ front: [6, 7, 8, 9, 10], back: [3, 4] }, 'predict');
+check('保留两注后清单长度 = 2', dlt.getPinned().length === 2);
+check('复制文本格式正确', dlt.pinsText() === '01 02 03 04 05  +  01 02\n06 07 08 09 10  +  03 04');
+dlt.togglePin({ front: [1, 2, 3, 4, 5], back: [1, 2] }, 'random');
+check('对同一注再点一次 -> 取消保留（剩 1）', dlt.getPinned().length === 1);
+check('保留的是后一注', dlt.getPinned()[0].f.join() === '6,7,8,9,10');
 
 
 // ---- 6. fetchHistory：接口失败时自动切内置离线数据 ----
