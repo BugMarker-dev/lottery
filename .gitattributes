@@ -1,0 +1,22 @@
+# 统一两台电脑间的换行符行为，避免 autocrlf 差异造成假改动 / 脚本失效
+# 文本文件统一按 LF 入库、LF 检出；bat 用 CRLF（cmd 对 LF 的 goto/label 解析有坑）
+* text=auto eol=lf
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# 二进制文件禁止任何转换
+*.png binary
+*.ico binary
+*.jpg binary
+*.gif binary
+*.webp binary
+*.ttf binary
+*.jar binary
+*.apk binary
+*.exe binary
+*.dll binary
+*.zip binary
+*.7z binary
+*.pdf binary
+*.keystore binary
+*.jks binary
